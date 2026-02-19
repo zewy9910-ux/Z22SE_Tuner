@@ -1,8 +1,10 @@
 # Opel Astra G Z22SE GMPT-E15 — ECU Binary Mapping Report
 
 **ECU:** GMPT-E15 (Delco/Delphi)  |  **Engine:** Z22SE 2.2L NA  |  **Vehicle:** Opel Astra G Cabrio 2004
-**Stock file:** `OpelAstraG_Z22SE_GMPT-E15_Stock.bin`  (524,288 bytes = 512 KB)
-**Stage 1 file:** `OpelAstraG_Z22SE_GMPT-E15_Stage 1.bin`
+**Stock file:** `sample_files/OpelAstraG_Z22SE_GMPT-E15_Stock.bin`  (524,288 bytes = 512 KB)
+**Stage 1 file:** `sample_files/OpelAstraG_Z22SE_GMPT-E15_Stage 1.bin`
+
+> **Note:** All sample ECU binary files are now stored in the `sample_files/` directory.
 
 ---
 ## 1  PIN / Immobilizer Code

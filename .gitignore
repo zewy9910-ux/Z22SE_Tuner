@@ -47,3 +47,11 @@ htmlcov/
 
 # Application specific - backups created by the tool
 *.bin.backup_*
+
+# Sample binary files (kept for reference, but can be excluded if repo size is a concern)
+# Uncomment the following lines to exclude sample binaries from the repository:
+# sample_files/*.bin
+# sample_files/*.ORI
+# sample_files/*.ori
+# sample_files/*.Original
+# sample_files/*.Stage*

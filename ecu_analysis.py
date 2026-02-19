@@ -7,9 +7,12 @@ Stock vs Stage 1 comparison, table mapping, PIN code extraction
 import struct
 import os
 
-STOCK  = "/home/zewy/Desktop/Z22SEECUMapping/OpelAstraG_Z22SE_GMPT-E15_Stock.bin"
-STAGE1 = "/home/zewy/Desktop/Z22SEECUMapping/OpelAstraG_Z22SE_GMPT-E15_Stage 1.bin"
-REPORT = "/home/zewy/Desktop/Z22SEECUMapping/ECU_Mapping_Report.md"
+# Updated to use sample_files directory
+BASE = os.path.dirname(os.path.abspath(__file__))
+SAMPLE_DIR = os.path.join(BASE, "sample_files")
+STOCK  = os.path.join(SAMPLE_DIR, "OpelAstraG_Z22SE_GMPT-E15_Stock.bin")
+STAGE1 = os.path.join(SAMPLE_DIR, "OpelAstraG_Z22SE_GMPT-E15_Stage 1.bin")
+REPORT = os.path.join(BASE, "ECU_Mapping_Report.md")
 
 with open(STOCK,  'rb') as f: stock  = bytearray(f.read())
 with open(STAGE1, 'rb') as f: stage1 = bytearray(f.read())

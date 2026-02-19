@@ -159,6 +159,19 @@ pip install PyQt6
 python Z22SE_Tuner.py
 ```
 
+### Repository Structure
+
+The repository is organized as follows:
+- `Z22SE_Tuner.py` - Main GUI application
+- `ecu_analysis.py` - Binary analysis and comparison tool
+- `analyze_oris.py` - Batch analysis tool for multiple ECU files
+- `sample_files/` - Directory containing sample ECU binary files (.bin, .ori, etc.)
+- `ECU_Mapping_Report.md` - Detailed memory mapping documentation
+- `QUICKREF.md` - Quick reference guide
+- `CONTRIBUTING.md` - Contribution guidelines
+
+> **Note**: All sample ECU binary files are stored in the `sample_files/` directory for better organization.
+
 ### Optional: Create Desktop Shortcut
 
 **Windows:**
@@ -476,6 +489,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+---
+
+## 📝 Version History
+
+### Version 4.0 (2026-02-19)
+- **Repository Reorganization**: Moved all binary files (.ori, .bin, .Original, .Stage*) to `sample_files/` directory
+- **Improved Structure**: Better organization for sample ECU files
+- **Updated Scripts**: All analysis tools now automatically reference files from `sample_files/` directory
+- **Enhanced Documentation**: Added comprehensive README in sample_files directory
+- **Updated References**: All documentation updated to reflect new file locations
+
+### Version 3.0 (Previous)
+- Initial public release with PyQt6 GUI
+- Stage 1, Stage 1+, and Stage 2 tuning profiles
+- Pop & Bang effects
+- Binary analysis tools
+- Comprehensive ECU memory mapping
 
 ---
 
