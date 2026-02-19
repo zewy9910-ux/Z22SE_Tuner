@@ -68,7 +68,8 @@ We actively welcome pull requests for:
 
 1. **Fork and Clone**
 ```bash
-git fork https://github.com/zewy9910-ux/Z22SE_Tuner.git
+# First, fork the repository on GitHub using the "Fork" button
+# Then clone your fork:
 git clone https://github.com/YOUR-USERNAME/Z22SE_Tuner.git
 cd Z22SE_Tuner
 ```
