@@ -30,6 +30,8 @@
 - [Contributing](#-contributing)
 - [License](#-license)
 
+> 📖 **Quick Reference**: See [QUICKREF.md](QUICKREF.md) for a concise cheat sheet with tables, addresses, and troubleshooting tips.
+
 ---
 
 ## 🎯 Overview
