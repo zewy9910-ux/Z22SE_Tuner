@@ -4,10 +4,12 @@
 
 1. **Install**: `pip install PyQt6`
 2. **Run**: `python Z22SE_Tuner.py`
-3. **Load** your stock ECU .bin file
+3. **Load** your stock ECU .bin file (or use samples from `sample_files/`)
 4. **Apply** Stage 1 tune
 5. **Save** modified file
 6. **Flash** to ECU using your preferred tool
+
+> **Note**: Sample ECU files are located in the `sample_files/` directory.
 
 ---
 
@@ -182,4 +184,4 @@ After flashing:
 
 ---
 
-*Last updated: 2026-02-19*
+*Last updated: 2026-02-19 - Version 4.0*

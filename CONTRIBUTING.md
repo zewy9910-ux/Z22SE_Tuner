@@ -226,16 +226,23 @@ git push origin feature/your-feature-name
 - [ ] Apply tuning profile (check change log)
 - [ ] Save modified file (verify backup creation)
 - [ ] Reset to original (verify changes are reverted)
-- [ ] Test with multiple ECU variants (2001 vs 2004 calibrations)
+- [ ] Test with multiple ECU variants (2001 vs 2004 calibrations from `sample_files/`)
 - [ ] Test error handling (invalid files, wrong size, etc.)
 
 ### Test ECU Files
 **Never commit real ECU files with sensitive data!**
 
 When testing:
-- Use anonymized test files
-- Remove PIN codes, VIN numbers, calibration IDs
+- Use sample files from the `sample_files/` directory for reference
+- Use anonymized test files for testing
+- Remove PIN codes, VIN numbers, calibration IDs from any new test files
 - Create minimal test fixtures (e.g., 512KB of zeros with specific addresses populated)
+- All sample binary files should be stored in `sample_files/` directory
+
+### Repository Organization
+- `sample_files/` - Contains all sample ECU binary files (.bin, .ori, .Original, .Stage*)
+- Root directory - Python scripts, documentation, and configuration files
+- Keep binary files organized in `sample_files/` to maintain clean repository structure
 
 ### Future: Automated Testing
 We welcome contributions to add automated testing:

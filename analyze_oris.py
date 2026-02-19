@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import struct, os, sys
 
-BASE = "/home/zewy/Desktop/Z22SEECUMapping"
+# Updated to use sample_files directory
+BASE = os.path.dirname(os.path.abspath(__file__))
+SAMPLE_DIR = os.path.join(BASE, "sample_files")
 FILES = {
-    "Stock_2004":   BASE+"/OpelAstraG_Z22SE_GMPT-E15_Stock.bin",
-    "Astra2004_EB": BASE+"/Astra G 2.2 SRi Z22SE GMPT 2004 Hw 12210453 EB.ORI",
-    "Astra2001_BC": BASE+"/Astra G 2.2 SRi Z22SE GMPT 2001 Hw 09391283 BC.ORI",
-    "Speedster_BZ": BASE+"/Opel Speedster 2.2 147hp Z22SE Hw 12202073 BZ.ORI",
+    "Stock_2004":   os.path.join(SAMPLE_DIR, "OpelAstraG_Z22SE_GMPT-E15_Stock.bin"),
+    "Astra2004_EB": os.path.join(SAMPLE_DIR, "Astra G 2.2 SRi Z22SE GMPT 2004 Hw 12210453 EB.ORI"),
+    "Astra2001_BC": os.path.join(SAMPLE_DIR, "Astra G 2.2 SRi Z22SE GMPT 2001 Hw 09391283 BC.ORI"),
+    "Speedster_BZ": os.path.join(SAMPLE_DIR, "Opel Speedster 2.2 147hp Z22SE Hw 12202073 BZ.ORI"),
 }
 
 HDR=7; NCOLS=13; NROWS=12
