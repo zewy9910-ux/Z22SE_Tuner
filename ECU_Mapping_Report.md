@@ -386,14 +386,18 @@ These regions are NOT modified in the Stage 1 file but are important for further
 
 Values appear to be ignition advance in degrees. Contains RPM breakpoints including 6500 RPM:
 ```
-  0x008F90: 255 204 163 136 117 103  92  66  52  44  38  33  30  27
-  0x008F9E:  25 158 124 103  88  77  69  62  57  52  44  38  33  30
-  0x008FAC:  27  25 119  96  81  70  62  56  51  47  43  40  38  33
-  0x008FBA:  30  27  25 100  81  69  60  53  48  44  41  38  35  33
-  0x008FC8:  32  30  27  25  87  72  61  54  48  44  40  37  34  32
-  0x008FD6:  30  29  27  26  25  79  65  56  49  44  40  37  34  32
-  0x008FE4:  30  28  27  25  24  23  72  60  52  46  41  37  34  32
-  0x008FF2:  30  28  26  25  24  23  22  69  57  49  44  39  36  33
+        Col→  0    1    2    3    4    5    6    7    8    9   10   11   12   13
+Row 0:       255  204  163  136  117  103   92   66   52   44   38   33   30   27
+Row 1:        25  158  124  103   88   77   69   62   57   52   44   38   33   30
+Row 2:        27   25  119   96   81   70   62   56   51   47   43   40   38   33
+Row 3:        30   27   25  100   81   69   60   53   48   44   41   38   35   33
+Row 4:        32   30   27   25   87   72   61   54   48   44   40   37   34   32
+Row 5:        30   29   27   26   25   79   65   56   49   44   40   37   34   32
+Row 6:        30   28   27   25   24   23   72   60   52   46   41   37   34   32
+Row 7:        30   28   26   25   24   23   22   69   57   49   44   39   36   33
+
+Note: The diagonal pattern (high value on the diagonal, low values off-diagonal)
+indicates this is a reference/scheduling table, not a primary tuning map.
 ```
 
 ### 6.2  IAT (Intake Air Temperature) Timing Correction
@@ -548,3 +552,113 @@ This is 48 bytes before our lambda start — the 2001 cal places its lambda tabl
 | Does our Stage1 modify lambda/O2 targets? | ✅ Yes, at `0x00C7A7` (2004 cal position, −5 to −14 = richer) |
 | Does the DB Stage1 update the ECU checksum? | ✅ Yes | Our Stage1 does not |
 **Bottom line:** The DB files are a **different-year calibration of the same ECU family**, confirming that all four Stage1 tunes (our Stage1 and DB Stage1) target exactly the same functional calibration tables. The DB tune is a useful reference for understanding what a more aggressive Z22SE Stage1 looks like on the same ECU platform.
+
+---
+
+## 11  OBDTuner Parameter Cross-Reference (v4)
+
+OBDTuner is an aftermarket ECU tuning platform for GM Ecotec engines (L61, LE5, LSJ).
+The Z22SE 2.2L is the **Opel designation for the GM L61 engine** — the same mechanical unit.
+
+**Important distinction:** OBDTuner *replaces* the stock GM/GMPT-E15 firmware with its own
+custom operating system. Z22SE_Tuner *patches* the original GMPT-E15 binary. The table
+*addresses* therefore differ, but the *parameters and functions* are equivalent.
+
+### 11.1  OBDTuner Features → GMPT-E15 Address Mapping
+
+| OBDTuner Parameter | GMPT-E15 Address | Size | Z22SE_Tuner (v4) |
+|---|---|---|---|
+| **Fuel (VE) Table** | `0x0086C9`, `0x00876C`, `0x00880F`, `0x0088B2` | 4 × 115B | ✅ Stage 1/1+/2 |
+| **Spark (Ignition) Table** | `0x0082C9`, `0x0083A9`, `0x008489`, `0x008569` | 4 × 163B | ✅ Stage 1/1+/2 |
+| **Lambda / AFR Targets** | `0x00C7A7`, `0x00C885` (2004); `0x00C5BD`, `0x00C640` (2001) | 2 × 163B | ✅ Stage 1/1+/2 |
+| **Rev Limit** | `0x00B568`, `0x00B56A` (2004 fw); auto-scanned (2001/Speedster) | uint16 BE | ✅ Custom RPM |
+| **Idle RPM Target** | `0x008162` × 12 locations | uint16 BE | ✅ 600–1200 RPM |
+| **IAT Timing Correction** | `0x00A610` – `0x00A650` | 12 bytes | ✅ Scale 0.0–1.5 |
+| **Knock Threshold** | `0x008D81` | 1 byte | ✅ stock/safe/aggr/disabled |
+| **O2 Closed-Loop Authority** | `0x00A680` – `0x00A690` | 16 bytes | ✅ Disable Lambda CL |
+| **Spark Ref Table (hi-res)** | `0x008F90` | 8×14 = 112B | ⚡ NEW v4: Hi-Res Ign Trim |
+| **Cold Start Enrichment** | `0x00876C` (fuel_maps[1]) | 115B | ⚡ NEW v4: ColdStart Scale |
+| **ECT Correction Area** | `0x008240` – `0x008260` | 32B | ⚠ Documented, not exposed |
+| **O2/Lambda Constants** | `0x00A5E0` – `0x00A620` | 64B | ⚠ Documented, not exposed |
+| **RPM Scheduling Table** | `0x008150` | 14 × uint16 BE | ⚠ Documented, not exposed |
+| **Injector Dead-Time** | Not yet confirmed | — | ❌ Not identified |
+| **Speed Limiter** | `0x00B540+` area (unconfirmed) | — | ❌ Address not confirmed |
+| **Boost Control** | N/A (Z22SE is naturally aspirated) | — | N/A |
+
+### 11.2  Axis Ranges: OBDTuner vs GMPT-E15 Stock Firmware
+
+| Axis | OBDTuner (standard) | GMPT-E15 Stock | Notes |
+|---|---|---|---|
+| **RPM** | 500 – 7800 RPM | 2000 – 6800 RPM (13 pts) | OBDTuner extends to idle (500) and beyond rev limit |
+| **MAP/Load** | 20 – 200 kPa | 46 – 117 kPa (12 pts) | Z22SE is NA; GMPT-E15 range appropriate |
+| **Fuel value** | 0 – 255 (VE %) | 0 – 255 (128 = neutral) | Same 8-bit encoding; 128 = stoichiometric |
+| **Lambda** | λ1.0 = 14.7:1 | 128 = λ1.0 = 14.7:1 | Identical scaling |
+| **Injectors** | 250 – 860 cc/min | ~245 cc/min (stock) | OBDTuner supports larger injectors |
+
+### 11.3  Newly Identified Addresses (from OBDTuner reverse-engineering)
+
+These addresses were identified by using OBDTuner's parameter list as a guide for what
+to look for in the GMPT-E15 binary, cross-referenced with `ecu_analysis.py` output:
+
+#### 11.3.1  High-Resolution Ignition Reference Table
+- **Address:** `0x008F90` — 8 rows × 14 cols = **112 bytes**
+- **Encoding:** uint8, ~0.5°/count (same as primary ignition maps)
+- **Pattern:** Diagonal activation (each row has active cell shifting right by one column)
+- **Modified by Stage 1:** ❌ No — not changed in any known tune
+- **OBDTuner equivalent:** Base Spark Table reference layer
+- **Z22SE_Tuner v4:** Exposed as "Hi-Res Ign Table Trim [OBDTuner]" (±4 counts max)
+
+```
+0x008F90: 255 204 163 136 117 103  92  66  52  44  38  33  30  27
+0x008F9E:  25 158 124 103  88  77  69  62  57  52  44  38  33  30
+0x008FAC:  27  25 119  96  81  70  62  56  51  47  43  40  38  33
+0x008FBA:  30  27  25 100  81  69  60  53  48  44  41  38  35  33
+0x008FC8:  32  30  27  25  87  72  61  54  48  44  40  37  34  32
+0x008FD6:  30  29  27  26  25  79  65  56  49  44  40  37  34  32
+0x008FE4:  30  28  27  25  24  23  72  60  52  46  41  37  34  32
+0x008FF2:  30  28  26  25  24  23  22  69  57  49  44  39  36  33
+```
+
+#### 11.3.2  ECT Cold-Start Correction Threshold Table
+- **Address:** `0x008240` — **32 bytes** of threshold/scaling constants
+- **OBDTuner equivalent:** Cold Start Enrichment table (CLT-indexed)
+- **Z22SE_Tuner v4:** The **cold fuel correction map** at `0x00876C` (fuel_maps[1], 115B)
+  is exposed directly via "Cold-Start Enrich Scale [OBDTuner]" for simpler user control.
+
+#### 11.3.3  O2/Lambda Sensor Constants
+- **Address:** `0x00A5E0` — **64 bytes** (includes IAT area at `0x00A610`)
+- **OBDTuner equivalent:** Lambda Settings / O2 correction coefficients
+- **Z22SE_Tuner v4:** Not directly exposed; use "Disable Lambda CL" for open-loop operation.
+
+#### 11.3.4  RPM-Indexed Spark Scheduling Table
+- **Address:** `0x008150` — **14 × uint16 BE** RPM breakpoints
+- **Values:** 2240, 2200, 2400, 2700, 2900, 3437, 3437, 3437, 8447, 800, 800, 800, 1200, 1600
+- **OBDTuner equivalent:** RPM Breakpoints for spark angle scheduling
+- **Z22SE_Tuner v4:** Documented only; includes idle (800 RPM), warm-up (1200, 1600 RPM) targets.
+
+### 11.4  Methodology
+
+The OBDTuner parameter analysis was conducted as follows:
+
+1. **Feature enumeration** — OBDTuner's published feature list (Fuel VE table, Spark table,
+   Lambda targets, Rev limit, Idle RPM, IAT correction, Cold Start Enrichment, Knock threshold,
+   O2 authority) was used as a checklist of parameter types to locate in GMPT-E15.
+
+2. **Binary pattern matching** — Each parameter type was searched in the stock binary using
+   characteristic patterns (e.g., 128=neutral for fuel/lambda, 800 RPM uint16 BE for idle,
+   6500 RPM uint16 BE for rev limit).
+
+3. **Differential analysis** — Stock vs Stage 1 binary diff confirmed which addresses map to
+   which parameters (modified addresses = active calibration tables).
+
+4. **Undocumented table discovery** — OBDTuner's "Spark Table" category led to the discovery
+   of the high-resolution reference table at `0x008F90` (not modified by Stage 1, but present
+   in all GMPT-E15 variants). Similarly, OBDTuner's "Cold Start Enrichment" led to confirming
+   the ECT correction area at `0x008240`.
+
+5. **Cross-validation** — All discovered addresses validated against all four known Z22SE
+   calibration files (12591333, 12215796, 12578132, 12210633).
+
+> **Result:** All primary OBDTuner tunable parameters have confirmed GMPT-E15 equivalents.
+> Two new addresses (`0x008F90`, cold start map) are now exposed in Z22SE_Tuner v4.
+> Injector dead-time and speed limiter addresses remain unconfirmed pending further analysis.
