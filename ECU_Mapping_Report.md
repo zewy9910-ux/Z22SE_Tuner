@@ -50,7 +50,7 @@ The fuel cut is implemented with two paired 16-bit big-endian RPM thresholds
 
 ### 3.1  12-Point RPM Axis (used by 4× 163-byte maps at 0x0082C9–0x00860B)
 
-Stored as 16-bit big-endian values at `0x0081C0`:
+Stored as 16-bit big-endian values at `0x0081B0`:
 
 | Idx | RPM  | Hex    |
 |-----|------|--------|
@@ -451,7 +451,7 @@ Values appear to be ignition advance in degrees. Contains RPM breakpoints includ
 | **Ignition Trim / Transient Correction (small)** | `0x0089CE` | 22 B | 2×11 byte table | CHANGED |
 | **Lambda/AFR Target Map (primary copy)** | `0x00C7A7` | 163 B | 12×13 byte table | CHANGED |
 | **Lambda/AFR Target Map (duplicate/backup copy)** | `0x00C885` | 163 B | 12×13 byte table | CHANGED |
-| **RPM axis (12-pt)** | `0x0081C0` | 24 bytes | uint16 BE ×12 | 2000–6400 RPM |
+| **RPM axis (12-pt)** | `0x0081B0` | 24 bytes | uint16 BE ×12 | 2000–6400 RPM |
 | **Load axis (12-pt)** | `0x008290` | 12 bytes | uint8 ×12 | 46–117 (raw) |
 | **Ignition map (hi-res)** | `0x008F90` | ~112 bytes | uint8 degrees | Not changed |
 | **IAT timing correction** | `0x00A610` | 12 bytes | uint8 degrees | Not changed |
