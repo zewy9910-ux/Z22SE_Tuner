@@ -662,3 +662,366 @@ The OBDTuner parameter analysis was conducted as follows:
 > **Result:** All primary OBDTuner tunable parameters have confirmed GMPT-E15 equivalents.
 > Two new addresses (`0x008F90`, cold start map) are now exposed in Z22SE_Tuner v4.
 > Injector dead-time and speed limiter addresses remain unconfirmed pending further analysis.
+
+---
+
+## 12  OBDTuner Decompilation — Complete Analysis
+
+> **Source:** `ObdTunerSt2.exe` v2.7.14.1 (ObdTunerV2.7.14-1.zip) decompiled with ILSpy 9.1.
+> `ObdTunerPro.exe` v3.2.31.3 (ObdTunerProV3.2.31.3.zip) is Dotfuscator-obfuscated and
+> imports from `ObdTunerSt2.exe` as a base assembly; the same table definitions apply.
+> Both describe themselves as: *"Tuning application for the Opel Speedster (VX 220)"*
+> (the VX220 uses the Z22SE engine on the same GMPT-E15 ECU platform).
+> Copyright © 2014–2019 Munckhof Engineering — Author: Peter v.d. Munckhof.
+
+### 12.1  Flash Memory Layout (OBDTuner custom firmware)
+
+OBDTuner **replaces** the stock GMPT-E15 firmware with its own custom OS.
+After installation, the flash is organised as follows:
+
+| Region | Flash Address | RAM Mirror Address | Size | Content |
+|--------|-------------|-------------------|------|---------|
+| OBDTuner program | `0x000000` | `0xFF_F000` (0xFF_B000) | Full | Custom ECU firmware |
+| **RAM Tables sector** | **`0x005000`** (20480) | **`0xFF_8000`** (16760832) | **2048 bytes** | All tunable tables |
+| **VIN sector** | **`0x006000`** (24576) | **`0xFF_7000`** (16756736) | **512 bytes** | VIN storage |
+
+> **Note:** The stock GMPT-E15 binary has `0xFF` (erased flash) at `0x5000–0x5800` because
+> this sector is only populated after OBDTuner firmware is installed.
+
+### 12.2  Complete Table Registry
+
+OBDTuner defines 21 user-accessible tables (each stored as both a FLASH and a RAM copy)
+plus 4 internal logging tables. The **TableId enum** from the decompiled source:
+
+| ID | TableId name | Dims (cols × rows) | Data type | Min/Max | Description |
+|----|-------------|-------------------|-----------|---------|-------------|
+|  1 | `TT_FUEL_LAMBDA_1_FLASH` | 37 × 20 | uint16 | 0–65535 | Main fuel (VE) table — FLASH copy |
+|  2 | `TT_FUEL_LAMBDA_1_RAM`   | 37 × 20 | uint16 | 0–65535 | Main fuel (VE) table — RAM (live) |
+|  3 | `TT_AFR_COOLANT_TEMP_CORR_FLASH` | 17 × 1 | uint8 | 0–255 | AFR coolant temp correction — FLASH |
+|  4 | `TT_AFR_COOLANT_TEMP_CORR_RAM`   | 17 × 1 | uint8 | 0–255 | AFR coolant temp correction — RAM |
+|  5 | `TT_IGNITION_CORRECTION_FLASH` | 37 × 20 | uint8 | 72–255 | Ignition correction map — FLASH |
+|  6 | `TT_IGNITION_CORRECTION_RAM`   | 37 × 20 | uint8 | 72–255 | Ignition correction map — RAM |
+|  7 | `TT_IGN_CTRL_IDLE_FLASH` | 6 × 1 | uint8 | 0–255 | Idle ignition control — FLASH |
+|  8 | `TT_IGN_CTRL_IDLE_RAM`   | 6 × 1 | uint8 | 0–255 | Idle ignition control — RAM |
+|  9 | `TT_IGN_MAP_AIRTEMP_FLASH` | 6 × 5 | uint8 | 0–57 | Ignition air-temp correction — FLASH |
+| 10 | `TT_IGN_MAP_AIRTEMP_RAM`   | 6 × 5 | uint8 | 0–57 | Ignition air-temp correction — RAM |
+| 11 | `TT_FUEL_AFR_FLASH` | 17 × 11 | uint8 | 90–147 | Target AFR (open loop) — FLASH |
+| 12 | `TT_FUEL_AFR_RAM`   | 17 × 11 | uint8 | 90–147 | Target AFR (open loop) — RAM |
+| 13 | `TT_IDLE_RPM_FLASH` | 17 × 1 | uint8 | 60–120 | Idle RPM vs coolant temp — FLASH |
+| 14 | `TT_IDLE_RPM_RAM`   | 17 × 1 | uint8 | 60–120 | Idle RPM vs coolant temp — RAM |
+| 15 | `TT_IDLE_FUEL_FLASH` | 13 × 9 | uint8 | 0–255 | Idle fuel enrichment table — FLASH |
+| 16 | `TT_IDLE_FUEL_RAM`   | 13 × 9 | uint8 | 0–255 | Idle fuel enrichment table — RAM |
+| 17 | `TT_THROTTLE_SPEED_FLASH` | 12 × 2 | uint8 | 0–255 | Throttle response speed — FLASH |
+| 18 | `TT_THROTTLE_SPEED_RAM`   | 12 × 2 | uint8 | 0–255 | Throttle response speed — RAM |
+| 20 | *(sensor data table)* | 46 × 5 | uint8 | 0–255 | Live sensor data display (no checksum) |
+| 21 | `TT_GENERIC_PARAMETERS_FLASH` | 32 × 1 | uint8 | 0–255 | All parameters — FLASH copy |
+| 22 | `TT_GENERIC_PARAMETERS_RAM`   | 32 × 1 | uint8 | 0–255 | All parameters — RAM (live) |
+| 23 | `TT_IGN_BASE_IDLE_FLASH` | 13 × 1 | uint8 | 0–255 | Base idle ignition angle — FLASH |
+| 24 | `TT_IGN_BASE_IDLE_RAM`   | 13 × 1 | uint8 | 0–255 | Base idle ignition angle — RAM |
+| 25 | `TT_AFR_AIR_TEMP_CORR_FLASH` | 17 × 1 | uint8 | 0–50 | AFR air-temp correction — FLASH |
+| 26 | `TT_AFR_AIR_TEMP_CORR_RAM`   | 17 × 1 | uint8 | 0–50 | AFR air-temp correction — RAM |
+| 27 | `TT_TRANSIENT_THROTTLE_DELTA_FLASH` | 17 × 1 | uint8 | 0–255 | Transient throttle delta — FLASH |
+| 28 | `TT_TRANSIENT_THROTTLE_DELTA_RAM`   | 17 × 1 | uint8 | 0–255 | Transient throttle delta — RAM |
+| 29 | `TT_TRANSIENT_MAP_DELTA_FLASH` | 17 × 1 | uint8 | 0–255 | Transient MAP delta — FLASH |
+| 30 | `TT_TRANSIENT_MAP_DELTA_RAM`   | 17 × 1 | uint8 | 0–255 | Transient MAP delta — RAM |
+| 31 | `TT_TRANSIENT_THROTTLE_POS_FLASH` | 9 × 1 | uint8 | 0–64 | Transient throttle position — FLASH |
+| 32 | `TT_TRANSIENT_THROTTLE_POS_RAM`   | 9 × 1 | uint8 | 0–64 | Transient throttle position — RAM |
+| 33 | `TT_TRANSIENT_MAP_DURATION_FLASH` | 6 × 1 | uint8 | 0–255 | Transient map duration — FLASH |
+| 34 | `TT_TRANSIENT_MAP_DURATION_RAM`   | 6 × 1 | uint8 | 0–255 | Transient map duration — RAM |
+| 35 | `TT_THROTTLE_PEDAL_RESPONSE_FLASH` | 33 × 1 | uint16 | 0–65535 | Pedal response curve — FLASH |
+| 36 | `TT_THROTTLE_PEDAL_RESPONSE_RAM`   | 33 × 1 | uint16 | 0–65535 | Pedal response curve — RAM |
+| 37 | `TT_INJECTOR_DEAD_TIME_FLASH` | 17 × 1 | uint8 | 0–254 | Injector dead-time — FLASH |
+| 38 | `TT_INJECTOR_DEAD_TIME_RAM`   | 17 × 1 | uint8 | 0–254 | Injector dead-time — RAM |
+| 39 | `TT_WARMUP_CORRECTION_FLASH` | 23 × 1 | uint8 | 0–255 | Warm-up fuel correction — FLASH |
+| 40 | `TT_WARMUP_CORRECTION_RAM`   | 23 × 1 | uint8 | 0–255 | Warm-up fuel correction — RAM |
+| 41 | `TT_SHORT_PULS_ADDER_FLASH` | 38 × 1 | uint8 | 0–255 | Short-pulse adder — FLASH |
+| 42 | `TT_SHORT_PULS_ADDER_RAM`   | 38 × 1 | uint8 | 0–255 | Short-pulse adder — RAM |
+| 240 | `TT_INTERNAL_SAMPLES_COUNT` | 37 × 20 | uint16 | — | Internal logging: sample counts |
+| 241 | `TT_INTERNAL_SLOT_1` | 37 × 20 | uint16 | — | Internal logging: fuel data |
+| 242 | `TT_INTERNAL_SLOT_2` | 37 × 20 | uint16 | — | Internal logging: knock data |
+| 243 | `TT_INTERNAL_SLOT_3` | 37 × 20 | uint16 | — | Internal logging: secondary |
+| 248 | `TT_INTERNAL_POWER_MEASUREMENT` | 200 × 20 | uint8 | — | Dyno/power measurement data |
+
+**RPM axis** (37 columns, 600 RPM spacing): 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200,
+2400, 2600, 2800, 3000, 3200, 3400, 3600, 3800, 4000, 4200, 4400, 4600, 4800, 5000, 5200,
+5400, 5600, 5800, 6000, 6200, 6400, 6600, 6800, 7000, 7200, 7400, 7600, 7800, 8000
+
+**MAP/Load axis** (20 rows, speed-density mode): 2.5–13.4+ kPa corrected by injector factor
+
+**Idle RPM axis** (17 cols = coolant temperature): −20, −10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140 °C
+
+### 12.3  Generic Parameters Table Layout (32 bytes, Tables 21/22)
+
+The `TT_GENERIC_PARAMETERS` table stores all scalar configuration parameters as a flat 32-byte array.
+It is the most important table for feature enable/disable operations.
+
+| Byte offset | IDX constant | Width | Description | Encoding |
+|-------------|-------------|-------|-------------|---------|
+| `0x00`–`0x01` | `IDX_MAX_MAP_DELTA` | uint16 BE | Maximum live map correction delta | Raw units |
+| `0x02` | `IDX_SPEED_LIMIT_LOW_RPM` | uint8 | Minimum RPM for speed limiter to activate | Raw RPM / scaling |
+| `0x03` | `IDX_SPEED_LIMIT_ON` | uint8 | Speed limiter activation threshold | km/h × 0.617 (OEM=150 → 243 km/h) |
+| `0x04` | `IDX_SPEED_LIMIT_OFF` | uint8 | Speed limiter deactivation threshold | km/h × 0.617 (OEM=149) |
+| `0x05` | `IDX_AIR_INTAKE_TEMP_SENSOR` | uint8 | IAT sensor type | 0=OEM Delphi, 1=Bosch |
+| `0x06` | `IDX_FAN_TEMP_ON` | uint8 | Coolant fan switch-on temperature | raw; OEM=193 (105°C), 177=92°C |
+| `0x07` | `IDX_FAN_TEMP_OFF` | uint8 | Coolant fan switch-off temperature | raw; OEM=189 (raw 189 ≈ 104°C, 1–4 counts below ON for hysteresis) |
+| `0x08`–`0x09` | `IDX_REV_LIMIT_THROTTLE_ON` | uint16 BE | Rev limiter engage RPM (throttle cut) | Direct RPM (OEM=6400) |
+| `0x0A`–`0x0B` | `IDX_REV_LIMIT_THROTTLE_OFF` | uint16 BE | Rev limiter disengage RPM | Direct RPM (OEM=6200) |
+| `0x0C`–`0x0D` | `IDX_REV_LIMIT_IGNITION_HIGH` | uint16 BE | Ignition cut engage RPM (high) | Direct RPM (OEM=6450) |
+| `0x0E`–`0x0F` | `IDX_REV_LIMIT_IGNITION_LOW` | uint16 BE | Ignition cut engage RPM (low) | Direct RPM (OEM=6450) |
+| `0x10` | `IDX_THROTTLE_BODY` | uint8 | Throttle body type — sets pedal map | 0=std, 1=65mm, 2=SC std, 3=SC 65mm, 4=SC 68mm, 5=SC 75mm |
+| `0x11` | `IDX_CAT_CHECK` | uint8 | Catalytic converter monitor | 0=enabled, **1=disabled** |
+| `0x12`–`0x13` | `IDX_INJECTOR_FACTOR` | uint16 BE | Injector static flow rate | cc/min at 3.8 bar (OEM=252 cc/min) |
+| `0x14`–`0x15` | `IDX_MAP_SENSOR_VOLT` | uint16 BE | MAP sensor voltage conversion factor | Sensor-dependent (OEM Delphi=32832) |
+| `0x16`–`0x17` | `IDX_MAP_SENSOR_KPA` | uint16 BE | MAP sensor kPa conversion factor | Sensor-dependent (OEM Delphi=35119) |
+| `0x18` | `IDX_FUEL_MODE` | uint8 | Fuel calculation mode bitfield | Bit 0: Base SD (0=Alpha-N, 1=Speed-Density); Bit 1: Idle SD |
+| `0x19` | `IDX_MAP_RANGE` | uint8 | MAP sensor maximum range | 5–13 = 100–260 kPa (20 kPa/unit); 15 = 300 kPa mode |
+| `0x1A` | `IDX_P0300_CHECK` | uint8 | Misfire (P0300) monitor | 0=enabled, **1=disabled** |
+| `0x1B` | `IDX_MULTIPARAMETER_01` | uint8 | Miscellaneous feature bitfield | See §12.4 |
+| `0x1C`–`0x1D` | `IDX_MINIMUM_PULSE_WIDTH` | uint16 BE | Injector minimum pulse width | raw = µs × 10.24 (e.g., OEM 952 µs → raw≈93; display: raw / 10.24 = µs) |
+| `0x1E`–`0x1F` | `IDX_EGR_CORRESPONDING_VALUES` | uint16 BE | EGR duty-cycle reference value | **0xFFFF = EGR disabled**; 0x6400 (25600) = enabled |
+
+### 12.4  MULTIPARAMETER_01 Bit Flags (offset 0x1B in Generic Parameters)
+
+| Bit | Mask | Feature | 0 (default) | 1 (modified) |
+|-----|------|---------|-------------|-------------|
+| 0 | `0x01` | **Idle control mode** | Closed-loop idle | Open-loop idle (manual) |
+| 1 | `0x02` | **Fuel pressure regulator** | Return-type (standard) | Return-less (pressure always on) |
+| 2 | `0x04` | **EGR valve** | EGR enabled | **EGR disabled** (also set IDX_EGR_CORRESPONDING_VALUES = 0xFFFF) |
+| 3 | `0x08` | **300 kPa MAP fix** | Off (standard ≤250 kPa) | Active (Bosch 3-bar MAP sensor correction) |
+| 4–7 | — | Reserved | — | — |
+
+> **EGR note:** The Z22SE / GMPT-E15 ECU does include EGR management. The VX220 (Opel Speedster),
+> Astra G, and other Z22SE variants have EGR hardware. OBDTuner provides an explicit disable feature.
+> Setting `IDX_MULTIPARAMETER_01 bit 2 = 1` AND `IDX_EGR_CORRESPONDING_VALUES = 0xFFFF` together
+> disables the EGR valve.
+
+### 12.5  Configurable Feature Presets
+
+#### 12.5.1  Rev Limiter Presets (OBDTuner range: 5000–7800 RPM)
+
+The OBDTuner `RevLimiter` parameter sets four RPM thresholds simultaneously:
+
+| RPM | ThrottleOn | ThrottleOff | IgnitionLow | IgnitionHigh |
+|-----|-----------|------------|-------------|-------------|
+| 5000 | 5000 | 4800 | 5050 | 5050 |
+| 5400 | 5400 | 5200 | 5450 | 5450 |
+| 5800 | 5800 | 5600 | 5850 | 5850 |
+| 6000 | 6000 | 5800 | 6050 | 6050 |
+| **6400 (OEM)** | **6400** | **6200** | **6450** | **6450** |
+| 6500 | 6500 | 6320 | 6550 | 6550 |
+| 6800 | 6800 | 6680 | 6850 | 6850 |
+| 7000 | 7000 | 6900 | 7050 | 7050 |
+| 7200 | 7200 | 7100 | 7250 | 7250 |
+| 7800 | 7800 | 7700 | 7850 | 7850 |
+
+> **OEM note:** OBDTuner identifies 6400 RPM as OEM for the VX220/Speedster.
+> The GMPT-E15 stock binary uses 6500 RPM (see §2). Both platforms use the same ECU hardware
+> but different calibrations; on the VX220 the stock limit was 6400.
+
+#### 12.5.2  Speed Limiter Presets
+
+Speed is encoded as: `raw = round(km/h × 0.61728)` (= km/h × 5/8.1 approx)
+
+| Setting | Raw ON | Raw OFF | Notes |
+|---------|--------|---------|-------|
+| 180 km/h | 111 | 110 | — |
+| 200 km/h | 123 | 123 | — |
+| 220 km/h | 136 | 135 | — |
+| **243 km/h (OEM)** | **150** | **149** | Original VX220 speed limiter |
+| 260 km/h | 160 | 160 | — |
+| 280 km/h | 173 | 172 | — |
+| 300 km/h | 185 | 185 | — |
+
+#### 12.5.3  Coolant Fan Temperature Presets
+
+| Temp °C | FAN_ON raw | FAN_OFF raw | Notes |
+|---------|-----------|------------|-------|
+| 92°C | 177 | 177 | — |
+| 95°C | 180 | 179 | — |
+| 98°C | 183 | 181 | — |
+| **105°C (OEM)** | **193** | **189** | Original switching temp |
+| Formula | T_on = °C + 85 | T_off = °C + 84 (approx) | ±1 raw unit for hysteresis |
+
+#### 12.5.4  Injector Type Presets
+
+OBDTuner stores full dead-time tables plus short-pulse correction per injector.
+The `IDX_INJECTOR_FACTOR` word encodes the static flow at 3.8 bar:
+
+| Injector | Static flow | Min pulse (µs) | Part number |
+|----------|------------|----------------|-------------|
+| **Delphi OEM** | **250 cc/min** | **952 µs** | Stock Astra G Z22SE |
+| Bosch 0 280 156 021 | 365 cc/min | 655 µs | Bosch upgrade |
+| LSJ green | 410 cc/min | 686 µs | GM 12790827 (Saturn Ion Redline) |
+| Bosch 0 280 156 280 | 470 cc/min | 512 µs | Bosch upgrade |
+| Bosch 0 280 155 968 | 495 cc/min | 500 µs | Under development |
+| Bosch 0 280 158 123 | 650 cc/min | 399 µs | High-flow Bosch |
+| Siemens 50 lb | 550 cc/min | 297 µs | Siemens |
+| Siemens 60 lb | 680 cc/min | 604 µs | Siemens 107961 |
+| Siemens 80 lb | 860 cc/min | 297 µs | Siemens 110324 |
+| Siemens 80 lb E85 | 860 cc/min | 297 µs | Siemens 110324 (E85 tune) |
+
+#### 12.5.5  MAP Sensor Presets
+
+OBDTuner stores two calibration values per sensor (`VOLT` and `KPA` conversion factors):
+
+| Sensor | VOLT raw | KPA raw | Max range | 300kPa fix |
+|--------|---------|--------|-----------|-----------|
+| **Delphi std (OEM)** | **32832** | **35119** | 250 kPa | No |
+| Delphi 2.0 bar | 32137 | 34916 | 200 kPa | No |
+| Bosch 2.5 bar | 26041 | 32392 | 250 kPa | No |
+| OmniPower 2.5 bar | 33196 | 35453 | 250 kPa | No |
+| **Bosch 3.0 bar** | **22497** | **31142** | **300 kPa** | **Yes** |
+
+#### 12.5.6  Throttle Body Type Presets
+
+| Value | Description | Pedal map applied |
+|-------|-------------|------------------|
+| 0 | Standard OEM | Original OEM pedal curve |
+| 1 | 65mm (sport) | Linear 65mm pedal curve |
+| 2 | SC turbo std | Standard SC/turbo pedal curve |
+| 3 | SC turbo 65mm | 65mm SC/turbo pedal curve |
+| 4 | SC turbo 68mm | 68mm SC/turbo pedal curve |
+| 5 | SC turbo 75mm | 75mm SC/turbo pedal curve (Pro only) |
+
+### 12.6  Live Data Logged by OBDTuner
+
+OBDTuner continuously logs the following sensor values from the ECU over OBD:
+
+| Channel | Description | Unit |
+|---------|-------------|------|
+| `m_EngineRpm` | Engine RPM | RPM |
+| `m_VehicleSpeed` | Vehicle speed | km/h |
+| `m_Map` | Manifold absolute pressure | kPa |
+| `m_Ignition` | Ignition timing | ° BTDC |
+| `m_Lambda1` | Front O2 sensor / wideband | λ |
+| `m_Lambda2` | Rear O2 sensor | λ |
+| `m_ShortTermFuelTrim` | Short-term fuel trim | % |
+| `m_LongTermFuelTrim` | Long-term fuel trim | % |
+| `m_DynamicInjectorFactor` | Dynamic injector correction | raw |
+| `m_KnockTotal` | Total knock retard | ° |
+| `m_KnockRetardCil1/2/3/4` | Per-cylinder knock retard | ° |
+| `m_KnockSensorVoltage` | Knock sensor voltage | V |
+| `m_FlyMapDelta` | Live map correction delta | raw |
+| `m_MapSensorVoltage` | MAP sensor voltage | V |
+| `m_CommandedIdlingRpm` | Target idle RPM (commanded) | RPM |
+| `m_EgrSetpoint` / `m_EgrFeedback` | EGR position cmd/actual | % |
+| `m_FuelSytemState` | Fuel system state (CL/OL/etc.) | enum |
+
+### 12.7  OBD Protocol Commands (Munckhof proprietary extension)
+
+OBDTuner uses Mode 0x50 (non-standard) commands over the OBD interface:
+
+| Command | Direction | Description |
+|---------|-----------|-------------|
+| `5043 XX CS` | ECU → PC | Request table XX from ECU (XX = table ID hex) |
+| `5016 AAAAAAAA NN CS` | ECU → PC | Read NN bytes from RAM address AAAAAAAA |
+| `5023 AAAA BB... CS` | PC → ECU | Write byte(s) to RAM address AAAA |
+| `5024 XX OOOO VV CS` | PC → ECU | Write byte VV to table XX header at offset OOOO |
+| `5052 NN CS` | PC → ECU | Set MIL (check engine light) mode (0=off,2=CL-log,3=CL-locked,4=ign+knock) |
+
+> **Key insight:** OBDTuner can reprogram the Check Engine / MIL light to function as an
+> alternative data output channel during logging. Mode 4 (`5052 04`) sets the MIL to indicate
+> ignition retard and knock activity — effectively a **knock indicator light**.
+> This is the closest OBDTuner gets to a "Check Engine Light Disable": it repurposes the
+> MIL as a tuning indicator rather than a fault indicator.
+
+### 12.8  Feature Mapping: OBDTuner vs GMPT-E15 Binary (Updated)
+
+Based on decompilation, the full feature set and its correspondence to the GMPT-E15 binary:
+
+| Feature | OBDTuner mechanism | GMPT-E15 binary equivalent | Status |
+|---------|---------------------|---------------------------|--------|
+| **Fuel (VE) table** | `TT_FUEL_LAMBDA_1` (37×20, uint16) | `0x0086C9–0x0088B2` (4 × 115 B, uint8) | ✅ Confirmed |
+| **Spark (ign) table** | `TT_IGNITION_CORRECTION` (37×20, uint8) | `0x0082C9–0x00860B` (4 × 163 B, uint8) | ✅ Confirmed |
+| **Target AFR (OL)** | `TT_FUEL_AFR` (17×11, uint8) | `0x00C7A7`, `0x00C885` (2 × 163 B) | ✅ Confirmed |
+| **AFR coolant temp corr** | `TT_AFR_COOLANT_TEMP_CORR` (17×1) | Near `0x00876C` area | ⚠ Partially confirmed |
+| **AFR air temp correction** | `TT_AFR_AIR_TEMP_CORR` (17×1) | `0x00A610` IAT area (12 B) | ✅ Confirmed |
+| **Ignition air temp** | `TT_IGN_MAP_AIRTEMP` (6×5) | `0x00A610`–`0x00A650` area | ✅ Confirmed |
+| **Idle ignition control** | `TT_IGN_CTRL_IDLE` (6×1) | Near ignition maps | ⚠ Not isolated |
+| **Base idle ignition** | `TT_IGN_BASE_IDLE` (13×1) | `0x008F90` area | ✅ Confirmed (hi-res table) |
+| **Idle RPM vs coolant** | `TT_IDLE_RPM` (17×1, uint8, ×12.5 = RPM) | `0x008150` RPM scheduling table | ✅ Confirmed |
+| **Idle fuel enrichment** | `TT_IDLE_FUEL` (13×9) | Part of fuel map region | ⚠ Address unconfirmed |
+| **Throttle response speed** | `TT_THROTTLE_SPEED` (12×2) | Not yet identified | ❌ |
+| **Throttle pedal response** | `TT_THROTTLE_PEDAL_RESPONSE` (33×1, uint16) | Not in stock binary (OBDTuner-specific) | N/A |
+| **Transient throttle delta** | `TT_TRANSIENT_THROTTLE_DELTA` (17×1) | Near `0x008900` area | ⚠ Not isolated |
+| **Transient MAP delta** | `TT_TRANSIENT_MAP_DELTA` (17×1) | Near `0x008900` area | ⚠ Not isolated |
+| **Transient throttle pos** | `TT_TRANSIENT_THROTTLE_POS` (9×1) | Near `0x008900` area | ⚠ Not isolated |
+| **Transient MAP duration** | `TT_TRANSIENT_MAP_DURATION` (6×1) | Near `0x008900` area | ⚠ Not isolated |
+| **Injector dead time** | `TT_INJECTOR_DEAD_TIME` (17×1, uint8) | Not yet confirmed | ❌ |
+| **Warm-up fuel correction** | `TT_WARMUP_CORRECTION` (23×1, uint8, offset −128, ×0.781) | `0x008240` ECT area (32 B) | ⚠ Partially confirmed |
+| **Short-pulse adder** | `TT_SHORT_PULS_ADDER` (38×1) | Not yet identified | ❌ |
+| **Rev limiter** | `IDX_REV_LIMIT_*` (4 × uint16) | `0x00B568` (2004), `0x00B560` area | ✅ Confirmed |
+| **Speed limiter** | `IDX_SPEED_LIMIT_ON/OFF` (uint8, km/h × 0.617) | Not yet isolated in GMPT-E15 | ❌ Address unconfirmed |
+| **Fan temperature** | `IDX_FAN_TEMP_ON/OFF` (uint8, °C + 85) | Not yet isolated in GMPT-E15 | ❌ Address unconfirmed |
+| **EGR disable** | `IDX_MULTIPARAMETER_01 bit 2` + `IDX_EGR_CORRESPONDING_VALUES=0xFFFF` | Not in GMPT-E15 stock binary (OBDTuner firmware required) | ⚡ OBDTuner-only |
+| **CAT check disable** | `IDX_CAT_CHECK = 1` | Not directly accessible in GMPT-E15 binary | ⚡ OBDTuner-only |
+| **P0300 misfire disable** | `IDX_P0300_CHECK = 1` | Not directly accessible in GMPT-E15 binary | ⚡ OBDTuner-only |
+| **Check engine light (MIL) mode** | `5052 XX` command (OBD) | Not in binary — ECU RAM command | ⚡ OBDTuner live only |
+| **Injector upgrade** | `IDX_INJECTOR_FACTOR` (uint16) | Not easily accessible in GMPT-E15 binary | ⚡ OBDTuner-only |
+| **MAP sensor upgrade** | `IDX_MAP_SENSOR_VOLT/KPA` (2 × uint16) | Not easily accessible in GMPT-E15 binary | ⚡ OBDTuner-only |
+| **Alpha-N / Speed-Density** | `IDX_FUEL_MODE` (uint8 bitfield) | Not exposed in GMPT-E15 binary | ⚡ OBDTuner-only |
+| **Fuel pressure range** | `IDX_MAP_RANGE` (uint8) | Not exposed in GMPT-E15 binary | ⚡ OBDTuner-only |
+| **Idle open-loop mode** | `IDX_MULTIPARAMETER_01 bit 0` | Not exposed in GMPT-E15 binary | ⚡ OBDTuner-only |
+
+**Legend:**
+- ✅ = Address confirmed in GMPT-E15 stock binary
+- ⚠ = Partially identified, address uncertain
+- ❌ = Not yet found in GMPT-E15 binary
+- ⚡ = Requires OBDTuner firmware; not applicable to binary patching
+
+### 12.9  Summary: New Findings from Decompilation
+
+The following information was **not previously available** in this report and was obtained
+exclusively from the OBDTuner decompilation:
+
+1. **Complete table list** — All 21 user tables + 4 internal tables with exact dimensions and data types.
+
+2. **Generic Parameters table layout** — The 32-byte `TT_GENERIC_PARAMETERS` table structure with
+   all 15 parameters and their byte offsets. This is the master control register for all ECU features.
+
+3. **EGR disable** — Confirmed: setting `MULTIPARAMETER_01 bit 2 = 1` AND
+   `IDX_EGR_CORRESPONDING_VALUES = 0xFFFF` disables the EGR valve. The GMPT-E15 does manage EGR.
+
+4. **CAT check disable** — `IDX_CAT_CHECK = 1` disables the catalytic converter monitor (O2 post-cat
+   comparison), eliminating P0420/P0430 codes after cat removal.
+
+5. **P0300 misfire disable** — `IDX_P0300_CHECK = 1` disables the random misfire detection. Useful
+   when running aggressive ignition advance that could falsely trigger P0300.
+
+6. **MIL/Check Engine Light repurpose** — The `5052 04` OBD command sets the MIL to indicate
+   knock retard in real time (Mode 4 = ignition + knock logging), turning the dashboard warning
+   light into a knock indicator during tuning.
+
+7. **Speed limiter** — Confirmed present with encoding `raw = km/h × 0.617`. OEM is 243 km/h
+   (raw = 150/149). Addresses `IDX_SPEED_LIMIT_ON = 3`, `IDX_SPEED_LIMIT_OFF = 4` within the
+   Generic Parameters table. **Not yet isolated in GMPT-E15 binary.**
+
+8. **Fan temperature control** — Encoding: `raw = °C + 85`. OEM = 193/189 (105°C ON/OFF).
+   Min adjustable: 92°C. **Not yet isolated in GMPT-E15 binary.**
+
+9. **Injector dead-time table** — `TT_INJECTOR_DEAD_TIME`: 17 × 1 bytes indexed by battery voltage
+   (0V, 160mV steps to 2560mV = 17 steps). Separate from static injector factor.
+   **Address in GMPT-E15 binary not confirmed.**
+
+10. **Short-pulse adder table** — `TT_SHORT_PULS_ADDER`: 38 × 1 bytes — corrects fuel delivery
+    non-linearity at short pulse widths. **Address in GMPT-E15 binary not confirmed.**
+
+11. **Warm-up correction** — `TT_WARMUP_CORRECTION`: 23 × 1 bytes, scale = 25/32 ≈ 0.781, offset −128.
+    Indexed by fuel trim index (0–22). Equivalent to the ECT cold-start area at `0x008240`.
+
+12. **Transient fuel enrichment** — Four separate tables control throttle-tip-in enrichment:
+    - `TT_TRANSIENT_THROTTLE_DELTA` (17 elements): fuel delta per throttle position change
+    - `TT_TRANSIENT_MAP_DELTA` (17 elements): fuel delta per MAP change
+    - `TT_TRANSIENT_THROTTLE_POS` (9 elements): position threshold for enrichment
+    - `TT_TRANSIENT_MAP_DURATION` (6 elements): duration of enrichment pulse
+
+13. **Idle control tables** — Three dedicated idle tables:
+    - `TT_IDLE_RPM` (17 cols, coolant-temp indexed): target idle RPM
+    - `TT_IDLE_FUEL` (13×9): idle fuel enrichment 2D map
+    - `TT_IGN_CTRL_IDLE` (6 elements): idle ignition closed-loop correction
+    - `TT_IGN_BASE_IDLE` (13 elements): base idle ignition angle
+
+14. **Throttle pedal response** — `TT_THROTTLE_PEDAL_RESPONSE`: 33 × 1 uint16 values. Presets
+    exist for standard OEM, 65mm sport, and various SC/turbo configurations. This is an
+    **OBDTuner-specific feature** with no direct GMPT-E15 binary equivalent.
+
