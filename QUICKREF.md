@@ -1,4 +1,4 @@
-# Z22SE Tuner Quick Reference
+# Z22SE Tuner Quick Reference  (v4 — OBDTuner Cross-Reference)
 
 ## 🚀 Quick Start
 
@@ -10,6 +10,7 @@
 6. **Flash** to ECU using your preferred tool
 
 > **Note**: Sample ECU files are located in the `sample_files/` directory.
+> **New in v4**: OBDTuner cross-reference tab + Hi-Res Ign Trim + Cold-Start Enrich Scale.
 
 ---
 
@@ -36,7 +37,7 @@
 | Ignition Map #3 | `0x008489` | 163 B | Part-load timing |
 | Ignition Map #4 | `0x008569` | 163 B | WOT timing reference |
 | Fuel Map #1 | `0x0086C9` | 115 B | Warm fuel correction |
-| Fuel Map #2 | `0x00876C` | 115 B | Cold fuel correction |
+| Fuel Map #2 | `0x00876C` | 115 B | Cold fuel correction (OBDTuner: Cold Start Enrich) |
 | Fuel Map #3 | `0x00880F` | 115 B | Part-load fuel |
 | Fuel Map #4 | `0x0088B2` | 115 B | WOT fuel |
 | Lambda Map (primary) | `0x00C7A7` | 163 B | AFR target map |
@@ -49,6 +50,18 @@
 | **Rev Limit** | `0x00B568` | uint16 BE | 6500 RPM | Fuel cut activation |
 | **PIN Code** | `0x008141` | BCD | 3305 | Immobilizer code |
 | **Part Number** | `0x00800C` | ASCII | 12591333 | ECU hardware ID |
+
+### OBDTuner-Derived Addresses (New in v4)
+
+| Parameter | Address | Size | OBDTuner Equivalent | Z22SE_Tuner v4 |
+|-----------|---------|------|---------------------|----------------|
+| Hi-Res Ign Ref | `0x008F90` | 112 B | Spark Table base | Fine Tuning → Hi-Res Ign Trim |
+| Cold Start Fuel | `0x00876C` | 115 B | Cold Start Enrichment | Fine Tuning → Cold-Start Scale |
+| ECT Correction | `0x008240` | 32 B | ECT threshold table | Documented only |
+| O2 Constants | `0x00A5E0` | 64 B | Lambda Settings | Documented only |
+| RPM Scheduling | `0x008150` | 28 B | RPM Breakpoints | Documented only |
+
+See the **🔗 OBDTuner** tab in the application for the full cross-reference table.
 
 ---
 
