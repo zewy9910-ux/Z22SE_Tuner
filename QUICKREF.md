@@ -65,7 +65,28 @@
 | O2 Constants | `0x00A5E0` | 64 B | Lambda Settings | Documented only |
 | RPM Scheduling | `0x008150` | 28 B | RPM Breakpoints | Documented only |
 
+### OBDTuner Flash Memory Layout (when OBDTuner firmware installed)
+
+| Region | Flash Address | Size | Content |
+|--------|-------------|------|---------|
+| RAM Tables sector | `0x5000` (20480) | 2048 B | All 21 tunable tables |
+| VIN sector | `0x6000` (24576) | 512 B | VIN storage |
+
+### OBDTuner Feature Flags (Generic Parameters Table, requires OBDTuner firmware)
+
+| Feature | Parameter | How to set | Notes |
+|---------|-----------|-----------|-------|
+| EGR Disable | `MULTIPARAMETER_01 bit 2` + `EGR_VAL=0xFFFF` | OBDTuner UI | Suppresses EGR valve; OBDTuner firmware required |
+| CAT Check Disable | `IDX_CAT_CHECK = 1` | OBDTuner UI | Disables P0420/P0430 codes after cat removal |
+| Misfire Disable | `IDX_P0300_CHECK = 1` | OBDTuner UI | Disables P0300 random misfire detection |
+| Check Engine / MIL repurpose | `5052 04` OBD command | OBDTuner UI | Sets MIL to indicate knock retard during logging |
+| Speed Limiter | `IDX_SPEED_LIMIT_ON/OFF` | OBDTuner UI | OEM=243 km/h; encoding: raw = km/h × 0.617 |
+| Rev Limiter | `IDX_REV_LIMIT_*` (4 values) | OBDTuner UI | Range 5000–7800 RPM; OEM VX220=6400 RPM |
+| Fan Temperature | `IDX_FAN_TEMP_ON/OFF` | OBDTuner UI | OEM=105°C; encoding: raw = °C + 85 |
+| Injector Upgrade | `IDX_INJECTOR_FACTOR` | OBDTuner UI | OEM=250 cc/min; supports up to 860 cc/min |
+
 See the **🔗 OBDTuner** tab in the application for the full cross-reference table.
+Full decompilation analysis: **Section 12** in [ECU_Mapping_Report.md](ECU_Mapping_Report.md).
 
 ---
 
@@ -201,4 +222,4 @@ After flashing:
 
 ---
 
-*Last updated: 2026-02-19 - Version 4.0*
+*Last updated: 2026-03-08 - Version 4.1 (OBDTuner decompilation analysis)*

@@ -103,6 +103,54 @@ RPM_SCHED_ADDR = 0x008150
 RPM_SCHED_COUNT = 14  # 14 × uint16 BE values
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# OBDTUNER GENERIC PARAMETERS TABLE — offset constants (decompiled from
+# ObdTunerSt2.exe v2.7.14.1, source: ObdTunerV2.7.14-1.zip)
+#
+# The OBDTuner "Generic Parameters" table (TT_GENERIC_PARAMETERS, Table ID 21/22)
+# is a flat 32-byte array stored in the OBDTuner flash sector at 0x5000.
+# These offsets (IDX_*) index into that 32-byte array.
+# They DO NOT correspond to GMPT-E15 stock binary addresses.
+# ═══════════════════════════════════════════════════════════════════════════════
+# Byte offsets within TT_GENERIC_PARAMETERS (Tables 21 / 22)
+OBT_IDX_MAX_MAP_DELTA          = 0   # uint16 BE — live map correction limit
+OBT_IDX_SPEED_LIMIT_LOW_RPM    = 2   # uint8  — minimum RPM for speed limiter
+OBT_IDX_SPEED_LIMIT_ON         = 3   # uint8  — km/h × 0.617 (OEM=150→243 km/h)
+OBT_IDX_SPEED_LIMIT_OFF        = 4   # uint8  — km/h × 0.617 (OEM=149)
+OBT_IDX_AIR_INTAKE_TEMP_SENSOR = 5   # uint8  — 0=OEM Delphi, 1=Bosch
+OBT_IDX_FAN_TEMP_ON            = 6   # uint8  — °C + 85 (OEM=193 → 105°C)
+OBT_IDX_FAN_TEMP_OFF           = 7   # uint8  — °C + 84 approx (OEM=189 → 104°C)
+OBT_IDX_REV_LIMIT_THROTTLE_ON  = 8   # uint16 BE — throttle cut engage RPM
+OBT_IDX_REV_LIMIT_THROTTLE_OFF = 10  # uint16 BE — throttle cut disengage RPM
+OBT_IDX_REV_LIMIT_IGN_HIGH     = 12  # uint16 BE — ignition cut engage RPM (high)
+OBT_IDX_REV_LIMIT_IGN_LOW      = 14  # uint16 BE — ignition cut engage RPM (low)
+OBT_IDX_THROTTLE_BODY          = 16  # uint8  — 0=std,1=65mm,2=SC-std,3=SC-65mm,4=SC-68mm,5=SC-75mm
+OBT_IDX_CAT_CHECK              = 17  # uint8  — 0=CAT monitor enabled, 1=DISABLED (no P0420)
+OBT_IDX_INJECTOR_FACTOR        = 18  # uint16 BE — injector static flow (cc/min at 3.8 bar)
+OBT_IDX_MAP_SENSOR_VOLT        = 20  # uint16 BE — MAP sensor voltage conversion (OEM=32832)
+OBT_IDX_MAP_SENSOR_KPA         = 22  # uint16 BE — MAP sensor kPa conversion (OEM=35119)
+OBT_IDX_FUEL_MODE              = 24  # uint8  — bit0=Base SD, bit1=Idle SD (0=Alpha-N)
+OBT_IDX_MAP_RANGE              = 25  # uint8  — 5–13 (×20 kPa), 15=300 kPa mode
+OBT_IDX_P0300_CHECK            = 26  # uint8  — 0=misfire monitor enabled, 1=DISABLED (no P0300)
+OBT_IDX_MULTIPARAMETER_01      = 27  # uint8  — bitfield (see OBDT_MP01_* masks below)
+OBT_IDX_MINIMUM_PULSE_WIDTH    = 28  # uint16 BE — injector min pulse width; raw = µs × 10.24
+OBT_IDX_EGR_CORRESPONDING_VAL  = 30  # uint16 BE — 0xFFFF=EGR disabled; 0x6400=enabled
+
+# MULTIPARAMETER_01 bit masks (offset OBT_IDX_MULTIPARAMETER_01 = 27)
+OBDT_MP01_IDLE_OPEN_LOOP   = 0x01  # Bit 0 — 1=forced open-loop idle control
+OBDT_MP01_RETURNLESS_FUEL  = 0x02  # Bit 1 — 1=return-less fuel pressure regulator
+OBDT_MP01_EGR_DISABLED     = 0x04  # Bit 2 — 1=EGR valve disabled (also set IDX_EGR_VAL=0xFFFF)
+OBDT_MP01_300KPA_FIX       = 0x08  # Bit 3 — 1=Bosch 3-bar MAP sensor correction active
+
+# OBDTuner-confirmed speed limiter encoding (km/h → raw byte):  raw = round(km/h × 0.61728)
+# OEM VX220/Speedster speed limiter: 243 km/h ON=150, OFF=149
+# Fan temperature encoding (°C → raw byte):  raw = °C + 85 (approx)
+# OEM fan switch: 105°C ON=193, OFF=189
+
+# OBDTuner Rev Limit OEM value (VX220/Speedster): 6400 RPM
+# ThrottleOn=6400, ThrottleOff=6200, IgnLow=6450, IgnHigh=6450
+# (GMPT-E15 Astra G stock uses 6500 RPM — see §2 of ECU_Mapping_Report.md)
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # ECU PROFILES  — maps addresses and metadata per part number
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -582,7 +630,13 @@ class TuneEngine:
         self._lambda(wot=-14, pl=-14)
 
     def disable_egr(self):
-        self.changes.append("► EGR Disable — N/A (Z22SE has no EGR)")
+        # Note: The Z22SE / GMPT-E15 ECU does include EGR management circuitry.
+        # OBDTuner (decompiled) confirms EGR disable via MULTIPARAMETER_01 bit 2
+        # and IDX_EGR_CORRESPONDING_VALUES = 0xFFFF.  Those parameters live in the
+        # OBDTuner flash sector (0x5000) which is NOT present in the stock binary,
+        # so EGR disable cannot be performed by binary patching on a stock GMPT-E15.
+        # Requires OBDTuner firmware installed on the ECU.
+        self.changes.append("► EGR Disable — requires OBDTuner firmware (not a binary-patch operation)")
 
     def disable_dtc(self):
         p = self.profile
@@ -992,9 +1046,10 @@ class MainWindow(QMainWindow):
             "Clamps CL authority → 0x80 neutral + fixes lambda targets full-rich.\n"
             "⚠ Best-effort. Verify on wideband O2 after flashing.")
         self.chk_egr = opt(
-            "⬜  Disable EGR", "N/A",
-            "Not applicable — Z22SE 2.2 petrol has no EGR valve.",
-            disabled_reason="Z22SE has no EGR. N/A.")
+            "⬜  Disable EGR", "OBDTuner firmware required",
+            "EGR disable is supported by OBDTuner (MULTIPARAMETER_01 bit 2 + IDX_EGR_CORRESPONDING_VALUES=0xFFFF).\n"
+            "Requires OBDTuner custom firmware installed on the ECU — cannot be done by binary patching alone.",
+            disabled_reason="EGR disable requires OBDTuner firmware (not a binary patch).")
         self.chk_dtc = opt(
             "🔴  Disable DTC Monitoring",
             "Zero DTC thresholds",
