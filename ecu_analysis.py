@@ -192,7 +192,7 @@ L("## 3  Table Axes")
 L("")
 L("### 3.1  12-Point RPM Axis (used by 4× 163-byte maps at 0x0082C9–0x00860B)")
 L("")
-L("Stored as 16-bit big-endian values at `0x0081C0`:")
+L("Stored as 16-bit big-endian values at `0x0081B0`:")
 L("")
 L("| Idx | RPM  | Hex    |")
 L("|-----|------|--------|")
@@ -349,7 +349,7 @@ L(f"| **Fuel Cut RPM (hysteresis)** | `0x00B570` | 2 bytes | uint16 BE | 6495 RP
 for addr, (name, size, rows, cols) in TABLE_MAP.items():
     tag = "CHANGED" if addr in [r[0] for r in regions] else "stock-only"
     L(f"| **{name}** | `0x{addr:06X}` | {size} B | {rows}×{cols} byte table | {tag} |")
-L(f"| **RPM axis (12-pt)** | `0x0081C0` | 24 bytes | uint16 BE ×12 | 2000–6400 RPM |")
+L(f"| **RPM axis (12-pt)** | `0x0081B0` | 24 bytes | uint16 BE ×12 | 2000–6400 RPM |")
 L(f"| **Load axis (12-pt)** | `0x008290` | 12 bytes | uint8 ×12 | 46–117 (raw) |")
 L(f"| **Ignition map (hi-res)** | `0x008F90` | ~112 bytes | uint8 degrees | Not changed |")
 L(f"| **IAT timing correction** | `0x00A610` | 12 bytes | uint8 degrees | Not changed |")

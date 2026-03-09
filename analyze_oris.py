@@ -15,6 +15,14 @@ HDR=7; NCOLS=13; NROWS=12
 IGN_MAPS  = [0x82C9, 0x83A9, 0x8489, 0x8569]
 FUEL_MAPS = [0x86C9, 0x876C, 0x880F, 0x88B2]
 
+# Lambda map start addresses differ by firmware variant
+LAMBDA_ADDR = {
+    "Stock_2004":   0xC7A7,   # 12591333
+    "Astra2004_EB": 0xC7A5,   # 12578132 — 2 bytes earlier
+    "Astra2001_BC": 0xC5F7,   # 12215796
+    "Speedster_BZ": 0xC5F7,   # 12210633
+}
+
 def u16(b,a): return struct.unpack_from('>H',b,a)[0]
 def ign_row(b,base,row): return [b[base+HDR+row*NCOLS+c] for c in range(NCOLS)]
 
@@ -52,9 +60,10 @@ for name,b in bufs.items():
             'over9': ign_row(b,ma,9),
             'over11':ign_row(b,ma,11),
         }
-    # Lambda @0xC7A7
-    lam_wot  = ign_row(b,0xC7A7,0)
-    lam_over = ign_row(b,0xC7A7,9)
+    # Lambda map — use per-file correct address
+    lam_addr = LAMBDA_ADDR.get(name, 0xC7A7)
+    lam_wot  = ign_row(b,lam_addr,0)
+    lam_over = ign_row(b,lam_addr,9)
 
     out.append(f"\n{'─'*72}")
     out.append(f"  FILE:       {name}  ({len(b):,} bytes)")
@@ -74,7 +83,7 @@ for name,b in bufs.items():
     out.append(f"  Ign#1 row8  PL   ( 77kPa): {ign_rows[0]['pl8']}")
     out.append(f"  Ign#1 row9  OVR  ( 63kPa): {ign_rows[0]['over9']}")
     out.append(f"  Ign#1 row11 OVR  ( 46kPa): {ign_rows[0]['over11']}")
-    out.append(f"  Lambda WOT  row0: {lam_wot}")
+    out.append(f"  Lambda WOT  row0: {lam_wot}  (addr 0x{lam_addr:06X})")
     out.append(f"  Lambda OVR  row9: {lam_over}")
 
 # Cross-file diff summary
@@ -110,9 +119,12 @@ for name,b in bufs.items():
         (0x88B2,0x8924,"Fuel Map #4"),
         (0x896B,0x89AA,"Ign Trim #1"),
         (0x89CE,0x89E3,"Ign Trim #2"),
-        (0xC7A7,0xC849,"Lambda Map #1"),
-        (0xC885,0xC927,"Lambda Map #2"),
-        (0xC5BD,0xC777,"Lambda 2001"),
+        (0xC7A7,0xC849,"Lambda Map #1 (12591333)"),
+        (0xC885,0xC927,"Lambda Map #2 (12591333)"),
+        (0xC7A5,0xC847,"Lambda Map #1 (12578132)"),
+        (0xC883,0xC925,"Lambda Map #2 (12578132)"),
+        (0xC5F7,0xC699,"Lambda Map #1 (2001/Speedster)"),
+        (0xC6D5,0xC778,"Lambda Map #2 (2001/Speedster)"),
         (0xB568,0xB57A,"Rev Limiter"),
         (0x8141,0x8145,"PIN"),
         (0x8000,0x8010,"Checksum/PN"),

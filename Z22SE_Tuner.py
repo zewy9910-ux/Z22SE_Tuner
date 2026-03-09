@@ -193,7 +193,7 @@ ECU_PROFILES = {
         ign_maps    = [0x0082C9, 0x0083A9, 0x008489, 0x008569],
         fuel_maps   = [0x0086C9, 0x00876C, 0x00880F, 0x0088B2],
         ign_trims   = [(0x00896B, 62), (0x0089CE, 22)],
-        lambda_maps = [0x00C5BD, 0x00C640],   # different offset vs 2004
+        lambda_maps = [0x00C5F7, 0x00C6D5],   # verified: 58 bytes (0x3A) after originally-cited offset
         rpm_engage  = None,    # auto-scanned — 0xB568 contains different data in 2001 fw
         rpm_hyster  = None,
         idle_rpm    = [0x008162, 0x008164, 0x008166],
@@ -220,7 +220,7 @@ ECU_PROFILES = {
         ign_maps    = [0x0082C9, 0x0083A9, 0x008489, 0x008569],
         fuel_maps   = [0x0086C9, 0x00876C, 0x00880F, 0x0088B2],
         ign_trims   = [(0x00896B, 62), (0x0089CE, 22)],
-        lambda_maps = [0x00C7A7, 0x00C885],
+        lambda_maps = [0x00C7A5, 0x00C883],   # 2 bytes earlier than 12591333
         rpm_engage  = [0x00B568, 0x00B56A],
         rpm_hyster  = [0x00B570, 0x00B572, 0x00B574, 0x00B576],
         idle_rpm    = [0x008162, 0x008164, 0x008166,
@@ -253,7 +253,7 @@ ECU_PROFILES = {
         ign_maps    = [0x0082C9, 0x0083A9, 0x008489, 0x008569],
         fuel_maps   = [0x0086C9, 0x00876C, 0x00880F, 0x0088B2],
         ign_trims   = [(0x00896B, 62), (0x0089CE, 22)],
-        lambda_maps = [0x00C5BD, 0x00C640],
+        lambda_maps = [0x00C5F7, 0x00C6D5],   # verified: same offset as 12215796
         rpm_engage  = None,    # auto-scanned
         rpm_hyster  = None,
         idle_rpm    = [0x008162, 0x008164, 0x008166],
@@ -700,9 +700,12 @@ class TuneEngine:
             (0x0088B2,0x008924): "Fuel Map #4",
             (0x00896B,0x0089AA): "Ign Trim #1",
             (0x0089CE,0x0089E3): "Ign Trim #2",
-            (0x00C7A7,0x00C849): "Lambda Map #1 (2004)",
-            (0x00C885,0x00C927): "Lambda Map #2 (2004)",
-            (0x00C5BD,0x00C777): "Lambda Map (2001 offset)",
+            (0x00C7A7,0x00C849): "Lambda Map #1 (2004/12591333)",
+            (0x00C885,0x00C927): "Lambda Map #2 (2004/12591333)",
+            (0x00C7A5,0x00C847): "Lambda Map #1 (2004/12578132)",
+            (0x00C883,0x00C925): "Lambda Map #2 (2004/12578132)",
+            (0x00C5F7,0x00C699): "Lambda Map #1 (2001/Speedster)",
+            (0x00C6D5,0x00C777): "Lambda Map #2 (2001/Speedster)",
             (0x00B568,0x00B579): "Rev Limiter",
             (0x008162,0x00816A): "Idle RPM",
         }
@@ -1339,10 +1342,12 @@ class MainWindow(QMainWindow):
             "  Ign Trim #1: 0x00896B (62B)  #2: 0x0089CE (22B)",
             "",
             "LAMBDA MAP ADDRESSES",
-            "  2004 firmware (12591333, 12578132):",
+            "  12591333 / __generic__ firmware:",
             "    Lambda #1: 0x00C7A7 (163B)   Lambda #2: 0x00C885 (163B)",
+            "  12578132 (2004 EB) firmware:",
+            "    Lambda #1: 0x00C7A5 (163B)   Lambda #2: 0x00C883 (163B)",
             "  2001 / Speedster firmware (12215796, 12210633):",
-            "    Lambda #1: 0x00C5BD           Lambda #2: 0x00C640",
+            "    Lambda #1: 0x00C5F7 (163B)   Lambda #2: 0x00C6D5 (163B)",
             "",
             "SCALARS & THRESHOLDS",
             "  Rev limit engage (2004 fw):   0x00B568, 0x00B56A  (uint16 BE)",
@@ -1563,16 +1568,16 @@ SUPPORTED FILES (v4)
           Cal: W0L0TGF675B000465 · Rev limit: 0xB568 · Lambda: 0xC7A7
 
 12578132  Opel Astra G Z22SE 2004 (Hw 12210453 EB)  ★ VERIFIED
-          Cal: W0L0TGF084… · Identical map addresses to 12591333
-          Same rev limit address. Lambda end-cols differ slightly.
+          Cal: W0L0TGF084… · Ign/Fuel maps identical to 12591333
+          Lambda: 0xC7A5 / 0xC883 (2 bytes earlier than 12591333).
 
 12215796  Opel Astra G Z22SE 2001 (Hw 09391283 BC)  ★ VERIFIED
-          Cal@0x402C: W0L0TGF081… · Lambda: 0xC5BD (different!)
+          Cal@0x402C: W0L0TGF081… · Lambda: 0xC5F7 / 0xC6D5 (different!)
           Rev limit: AUTO-SCANNED (0xB568 holds different data in
           2001 firmware). Ign map row0 differs at low RPM.
 
 12210633  Opel Speedster 2.2 147hp (Hw 12202073 BZ)  ⚠ EXPERIMENTAL
-          Cal: not in standard location. Lambda: 0xC5BD.
+          Cal: not in standard location. Lambda: 0xC5F7 / 0xC6D5.
           Load axis uses DIFFERENT scale [59,60,62…27] — not kPa MAP.
           All map byte-addresses identical. Zone rows same position.
           Rev limit: AUTO-SCANNED. Tune deltas apply correctly.

@@ -40,8 +40,12 @@
 | Fuel Map #2 | `0x00876C` | 115 B | Cold fuel correction (OBDTuner: Cold Start Enrich) |
 | Fuel Map #3 | `0x00880F` | 115 B | Part-load fuel |
 | Fuel Map #4 | `0x0088B2` | 115 B | WOT fuel |
-| Lambda Map (primary) | `0x00C7A7` | 163 B | AFR target map |
-| Lambda Map (backup) | `0x00C885` | 163 B | AFR duplicate |
+| Lambda Map (primary) | `0x00C7A7` | 163 B | AFR target map | 2004 (12591333) |
+| Lambda Map (backup) | `0x00C885` | 163 B | AFR duplicate | 2004 (12591333) |
+| Lambda Map (primary) | `0x00C7A5` | 163 B | AFR target map | 2004 (12578132 EB) |
+| Lambda Map (backup) | `0x00C883` | 163 B | AFR duplicate | 2004 (12578132 EB) |
+| Lambda Map (primary) | `0x00C5F7` | 163 B | AFR target map | 2001/Speedster |
+| Lambda Map (backup) | `0x00C6D5` | 163 B | AFR duplicate | 2001/Speedster |
 
 ### Critical Parameters
 
